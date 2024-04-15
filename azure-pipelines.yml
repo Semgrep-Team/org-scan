@@ -1,22 +1,29 @@
 variables:
 - group: Semgrep_Variables_Victor
 
-steps:
-- checkout: self
-  clean: true
-  fetchDepth: 20
-  persistCredentials: true
-- script: |
-    python -m pip install --upgrade pip
-    pip install semgrep
-    if [ $(Build.SourceBranchName) = "master" ]; then
-        echo "Semgrep full scan"
-        semgrep ci
-    elif [ $(System.PullRequest.PullRequestId) -ge 0 ]; then
-        echo "Semgrep diff scan"
-        export SEMGREP_PR_ID=$(System.PullRequest.PullRequestId)
-        export SEMGREP_BASELINE_REF='origin/master'
-        git fetch origin master:origin/master
-        semgrep ci 
-    fi
-
+resources:
+  repositories: 
+    - repository: html-scans
+      type: github
+      name: victor-ok/html-scans
+      ref: refs/heads/main
+      # ref: ${{ variables['Build.SourceBranch'] }}
+      endpoint: victor-ok # Please change the name of service connection here. More details can be found in additonal information below.
+jobs:
+- job: Semgrep_Scan
+  steps:
+    - script: |
+        python -m pip install --upgrade pip
+        pip install semgrep
+        if [ $(Build.SourceBranchName) = "master" ]; then
+            echo "Semgrep full scan"
+            semgrep ci
+        elif [ $(System.PullRequest.PullRequestId) -ge 0 ]; then
+            echo "Semgrep diff scan"
+            export SEMGREP_PR_ID=$(System.PullRequest.PullRequestId)
+            export SEMGREP_BASELINE_REF='origin/master'
+            git fetch origin master:origin/master
+            semgrep ci 
+        fi
+        env:
+            SEMGREP_APP_TOKEN: $(SEMGREP_APP_TOKEN)
