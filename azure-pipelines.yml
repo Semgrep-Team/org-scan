@@ -1,5 +1,5 @@
 variables:
-- group: Semgrep_Variables
+- group: Semgrep_Variables_Victor
 
 steps:
 - checkout: self
