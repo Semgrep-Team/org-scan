@@ -25,5 +25,3 @@ jobs:
             git fetch origin master:origin/main
             semgrep ci 
         fi
-        env:
-            SEMGREP_APP_TOKEN: $(SEMGREP_APP_TOKEN)
