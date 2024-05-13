@@ -1,0 +1,49 @@
+name: Semgrep comments
+on:
+  # Existing triggers (workflow_dispatch, pull_request, push)
+  pull_request:
+    types: [closed] 
+jobs:
+  check_comment:
+    runs-on: ubuntu-latest
+    needs: semgrep
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - uses: actions/checkout@v3
+      - name: Get PR comments
+        id: get_comments
+        run: |
+            github.actions.comment.list issue_number=${{ github.event.number }} owner=${{ github.repository_owner }} repo=${{ github.repo }} > comments.json
+
+      - uses: actions/checkout@v3
+      - name: Check for ignored findings without justification
+        run: |
+          ignored_findings=$(jq '.comments[] | select(.body | contains("Semgrep")) | select(.body | not contains("fix") | not contains("false positive") | not contains("wontfix"))' comments.json)
+          if [[ $ignored_findings != "[]" ]]; then
+            echo "Found ignored Semgrep findings without justification:"
+            echo "$ignored_findings"
+            exit 1  # This will cause the job to fail
+          else
+            echo "No ignored Semgrep findings found without justification."
+          fi
+
+      
+      # - name: Notify reviewers (Optional)
+      #   if: failure()
+      #   uses: actions/github-script@v6
+      #   with:
+      #     script: |
+      #       github.issues.createComment(context.issue.number, {
+      #         body: "**Attention! There are ignored Semgrep findings in this PR without justification. Please review the comments and address them before merging.**"
+      #       })
+
+      - name: Block merge (Optional)
+        if: failure()
+        uses: gr2m/fail-workflow@v2
+        with:
+          message: "Semgrep findings ignored without justification. Please provide a reason."
